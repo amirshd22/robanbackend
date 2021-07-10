@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-d^alnjhm^r25@!gpzq_6a_n%6t^i5+9qa9d_&$_)h)*!gz!-=w
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["192.168.1.38", "localhost"]
+ALLOWED_HOSTS = ["192.168.1.36", "localhost"]
 
 
 # Application definition
@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     "corsheaders",
     # apps
     'users.apps.UsersConfig',
+    'todo.apps.TodoConfig',
+
 
 
 ]
@@ -178,7 +180,14 @@ USE_TZ = True
 
 
 CORS_ALLOW_ALL_ORIGINS = True
-
+CORS_ALLOW_METHODS = (
+        'GET',
+        'POST',
+        'PUT',
+        'PATCH',
+        'DELETE',
+        'OPTIONS'
+    )
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 STATIC_URL = '/static/'

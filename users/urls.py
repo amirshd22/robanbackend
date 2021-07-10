@@ -16,5 +16,6 @@ urlpatterns = [
     path('delete-profile/', views.delete_user, name="delete-user"),
     path('profile_update/delete/', views.ProfilePictureDelete, name="profile_delete_photo"), 
     path('<str:username>/', views.user, name="user"),
-
+    path('profile_update/interests/', views.update_interests, name='update_interests'),
+    path('interests/', views.getIntrests, name="get_interests")
 ]

@@ -2,6 +2,7 @@ import datetime
 import uuid
 import random
 import os.path
+from django.http import request
 
 from django.shortcuts import render
 from django.contrib.auth.models import User
@@ -18,8 +19,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 # Create your views here.
-from .models import UserProfile 
-from .serializers import (UserProfileSerializer, UserSerializer,
+from .models import UserProfile ,TopicTag
+from .serializers import (TopicTagSerializer, UserProfileSerializer, UserSerializer,
                           UserSerializerWithToken, CurrentUserSerializer)
 
 
@@ -63,13 +64,13 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-
+        # token['userProfile'] = user.userprofile
+        token['email'] = user.email
         token['username'] = user.username
         token['name'] = user.userprofile.name
         token['profile_pic'] = 'static' + user.userprofile.profile_pic.url
         token['is_staff'] = user.is_staff
         token['id'] = user.id
-
         return token
 
     def validate(self, attrs):
@@ -141,10 +142,11 @@ class ProfilePictureUpdate(APIView):
 
     def patch(self, *args, **kwargs):
         rd = random.Random()
-        profile_pic=self.request.FILES['profile_pic']
-        extension = os.path.splitext(profile_pic.name)[1]
-        profile_pic.name='{}{}'.format(uuid.UUID(int=rd.getrandbits(128)), extension)
-        filename = default_storage.save(profile_pic.name, profile_pic)
+        profile_pic=self.request.data.get('profile_pic')
+        extension = os.path.splitext(profile_pic)[1]
+        profile_pic_name="{}{}".format(uuid.UUID(int=rd.getrandbits(128)), extension)
+        filename = default_storage.save(profile_pic_name, profile_pic)
+        print(profile_pic,"this is the file nameeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
         setattr(self.request.user.userprofile, 'profile_pic', filename)
         serializer=self.serializer_class(
             self.request.user.userprofile, data={}, partial=True)
@@ -170,4 +172,24 @@ def delete_user(request):
     user = request.user
     user.delete()
     return Response({'detail':'Account deleted successfully'},status=status.HTTP_200_OK)
-    
+
+
+@api_view(['PATCH'])
+@permission_classes((IsAuthenticated,))
+def update_interests(request): 
+    user_profile = request.user.userprofile
+    interests = request.data.get("name")
+    print(interests)
+    user_profile.interests.set(
+            TopicTag.objects.get(name=interest) for interest in interests
+    )
+    user_profile.save()
+    serializer = UserProfileSerializer(user_profile, many=False)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes((IsAuthenticated,))
+def getIntrests(request):
+    intrests = TopicTag.objects.all()
+    serializer = TopicTagSerializer(intrests,many=True)
+    return Response(serializer.data)
