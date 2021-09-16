@@ -2,11 +2,17 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import UserProfile, TopicTag
+from .models import UserProfile, TopicTag,Member
 
 class TopicTagSerializer(serializers.ModelSerializer):
     class Meta:
         model = TopicTag
+        fields = '__all__'
+
+class MemberSerializer(serializers.ModelSerializer):
+    interests = TopicTagSerializer(many=True, read_only=True)
+    class Meta:
+        model = Member
         fields = '__all__'
 
 
@@ -14,7 +20,6 @@ class UserProfileSerializer(serializers.ModelSerializer):
     profile_pic = serializers.SerializerMethodField(read_only=True)
     faceRecognition_pic = serializers.SerializerMethodField(read_only=True)
     interests = TopicTagSerializer(many=True, read_only=True)
-
     class Meta:
         model = UserProfile
         fields = '__all__'
@@ -33,6 +38,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             face = None
         return face
 
+
 class CurrentUserSerializer(serializers.ModelSerializer):
     profile = serializers.SerializerMethodField(read_only=True)
     class Meta:
@@ -47,9 +53,14 @@ class CurrentUserSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     profile = serializers.SerializerMethodField(read_only=True)
+    members =serializers.SerializerMethodField(read_only=True)
+    def get_members(self, obj):
+        members = obj.member_set.all()
+        serializer = MemberSerializer(members, many=True)
+        return serializer.data
     class Meta:
         model = User
-        fields = ['id', 'profile', 'username', 'is_superuser', 'is_staff']
+        fields = ['id', 'profile', 'username', 'is_superuser', 'is_staff', "members"]
 
     def get_profile(self, obj):
         profile = obj.userprofile

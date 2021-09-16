@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-d^alnjhm^r25@!gpzq_6a_n%6t^i5+9qa9d_&$_)h)*!gz!-=w
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["192.168.1.36", "localhost"]
+ALLOWED_HOSTS = ["192.168.1.36", "localhost", "192.168.1.35", "192.168.1.37", "192.168.1.38", "192.168.1.33", "172.20.10.2"]
 
 
 # Application definition
@@ -47,6 +47,8 @@ INSTALLED_APPS = [
     # apps
     'users.apps.UsersConfig',
     'todo.apps.TodoConfig',
+    'mirror.apps.MirrorConfig',
+
 
 
 
@@ -72,8 +74,8 @@ REST_FRAMEWORK = {
 
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=160),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=200),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=300),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': False,

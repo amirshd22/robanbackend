@@ -1,26 +1,16 @@
-import datetime
-import uuid
-import random
-import os.path
-from django.http import request
-
-from django.shortcuts import render
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
-from django.core.files.storage import default_storage
 
 from rest_framework import permissions, status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import FileUploadParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
-# Create your views here.
-from .models import UserProfile ,TopicTag
-from .serializers import (TopicTagSerializer, UserProfileSerializer, UserSerializer,
+from .models import UserProfile ,TopicTag , Member
+from .serializers import (MemberSerializer, TopicTagSerializer, UserProfileSerializer, UserSerializer,
                           UserSerializerWithToken, CurrentUserSerializer)
 
 
@@ -109,45 +99,74 @@ def profile(request):
     return Response(serializer.data)
 
 
-class UserProfileUpdate(APIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = UserProfileSerializer
+# class UserProfileUpdate(APIView):
+#     permission_classes = [IsAuthenticated]
+#     serializer_class = UserProfileSerializer
 
 
-    def patch(self, *args, **kwargs):
-        profile = self.request.user.userprofile
-        serializer = self.serializer_class(
-            profile, data=self.request.data, partial=True)
-        if serializer.is_valid():
-            user = serializer.save().user
+#     def patch(self, *args, **kwargs):
+#         profile = self.request.user.userprofile
+#         serializer = self.serializer_class(
+#             profile, data=self.request.data, partial=True)
+#         if serializer.is_valid():
+#             user = serializer.save().user
             
-            response = {'success': True, 'message': 'successfully updated your info',
-                        'user': UserSerializer(user).data}
-            new_email = self.request.data.get('email')
-            user = self.request.user
-            if new_email is not None:
-                user.email = new_email
-                user.save()
-                profile.save()
-            return Response(response, status=200)
-        else:
-            response = serializer.errors
-            return Response(response, status=401)
+#             response = {'success': True, 'message': 'successfully updated your info',
+#                         'user': UserSerializer(user).data}
+#             new_email = self.request.data.get('email')
+#             user = self.request.user
+#             if new_email is not None:
+#                 user.email = new_email
+#                 user.save()
+#                 profile.save()
+#             return Response(response, status=200)
+#         else:
+#             response = serializer.errors
+#             return Response(response, status=401)
+
+@api_view(['PATCH'])
+@permission_classes((IsAuthenticated,))
+def UserProfileUpdate(request):
+    profile= request.user.userprofile
+    data= request.data["data"]
+    if request.data["id"] != "":
+        try:
+            member = Member.objects.get(id = request.data["id"])
+            member.name = data["name"]
+            member.character = data["character"]
+            member.lastName = data["lastName"]
+            member.gender = data["gender"]
+            member.city = data["city"]
+            member.birth_day_date = data["birth_day_date"]
+            member.phoneNumber = data["phoneNumber"]
+            member.save()
+            serializer = MemberSerializer(member , many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"details": f"{e}"})
+    else:
+        try:
+            profile.name = data["name"]
+            profile.character = data["character"]
+            profile.lastName = data["lastName"]
+            profile.gender = data["gender"]
+            profile.city = data["city"]
+            profile.birth_day_date = data["birth_day_date"]
+            profile.phoneNumber = data["phoneNumber"]
+            profile.save()
+            serializer = UserProfileSerializer(profile , many=True)  
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"details": f"{e}"})
 
 
 class ProfilePictureUpdate(APIView):
     permission_classes=[IsAuthenticated]
     serializer_class=UserProfileSerializer
     parser_class=(FileUploadParser,)
-
     def patch(self, *args, **kwargs):
-        rd = random.Random()
-        profile_pic=self.request.data.get('profile_pic')
-        extension = os.path.splitext(profile_pic)[1]
-        profile_pic_name="{}{}".format(uuid.UUID(int=rd.getrandbits(128)), extension)
-        filename = default_storage.save(profile_pic_name, profile_pic)
-        print(profile_pic,"this is the file nameeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
-        setattr(self.request.user.userprofile, 'profile_pic', filename)
+        profile_pic=self.request.FILES.get('profile_pic')
+        setattr(self.request.user.userprofile, 'profile_pic', profile_pic)
         serializer=self.serializer_class(
             self.request.user.userprofile, data={}, partial=True)
         if serializer.is_valid():
@@ -179,13 +198,22 @@ def delete_user(request):
 def update_interests(request): 
     user_profile = request.user.userprofile
     interests = request.data.get("name")
-    print(interests)
-    user_profile.interests.set(
+    if request.data.get("id") != "":
+        member_id = request.data.get("id")
+        member= Member.objects.get(id = member_id)
+        member.interests.set(
             TopicTag.objects.get(name=interest) for interest in interests
-    )
-    user_profile.save()
-    serializer = UserProfileSerializer(user_profile, many=False)
-    return Response(serializer.data)
+        )
+        member.save()
+        serializer = MemberSerializer(member, many=False)
+        return Response(serializer.data)
+    else:
+        user_profile.interests.set(
+                TopicTag.objects.get(name=interest) for interest in interests
+        )
+        user_profile.save()
+        serializer = UserProfileSerializer(user_profile, many=False)
+        return Response(serializer.data)
 
 @api_view(['GET'])
 @permission_classes((IsAuthenticated,))
@@ -193,3 +221,42 @@ def getIntrests(request):
     intrests = TopicTag.objects.all()
     serializer = TopicTagSerializer(intrests,many=True)
     return Response(serializer.data)
+
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
+def createMember(request):
+    data = request.data
+    user = request.user
+    try:
+        member= Member.objects.create(
+            parent=user,
+            username=data["username"],
+            character= data["character"],
+            name=data["name"],
+            lastName=data["lastName"],
+            gender= data["gender"],
+            city=data["city"],
+            birth_day_date= data["birth_day_date"],
+        )
+        serializer = MemberSerializer(member, many=False)
+        return Response(serializer.data)
+    except Exception as e:
+        return Response({"details": f"{e}"})
+
+@api_view(['PATCH'])
+@permission_classes((IsAuthenticated,))
+def updateMemberInterest(request, id):
+    user= request.user
+    interests = request.data.get("name")
+    member = Member.objects.get(id=id)
+
+    try:
+        if user == member.parent:
+            member.interests.set(
+                TopicTag.objects.get(name=interest) for interest in interests
+            )
+            return Response({"details": "member updated"})
+        else:
+            return Response({"details": "unAuthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+    except Exception as e:
+        return Response({"details": f"{e}"})

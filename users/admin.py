@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import UserProfile, TopicTag
+from .models import UserProfile, TopicTag,Member
 # Register your models here.
 
 
@@ -10,3 +10,4 @@ class AdminTopicTag(admin.ModelAdmin):
 
 admin.site.register(TopicTag, AdminTopicTag)
 admin.site.register(UserProfile)
+admin.site.register(Member)
